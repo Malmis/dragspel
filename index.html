@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <title>Dragspel</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-  textarea { width: 100%; height: 120px; font-family: monospace; font-size: 1rem; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  textarea { width: 100%; height: 300px; font-family: monospace; font-size: .95rem; box-sizing: border-box; }
   button { padding: .6rem 1.2rem; font-size: 1rem; margin-right: .5rem; }
   label { display: block; margin: .6rem 0; }
   input[type=number] { width: 5rem; }
@@ -14,12 +14,28 @@
 </head>
 <body>
 <h1>Dragspel</h1>
-<p>Skriv noter som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>.
-Längden är i taktslag (1 = kvartsnot, 0.5 = åttonot, 2 = halvnot).
-Paus skrivs som <code>R</code>, t.ex. <code>R 1</code>. Halvtonsteg: <code>F#3</code> eller <code>Bb3</code>.</p>
+<p>Skriv en rad per takt: <code>Takt | Ackord | Melodi | Bas</code>.<br>
+Noter skrivs som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>. Paus: <code>R 1</code>.
+Längden är i taktslag. Melodi och bas på samma rad spelas samtidigt och ska summera till samma antal taktslag.
+Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubriker) hoppas över.
+Skriver du bara <code>Melodi | Bas</code> eller bara melodin fungerar det också.</p>
 
-<textarea id="notes">C4 1 E4 1 G4 1 C5 2
-G4 0.5 A4 0.5 B4 0.5 C5 0.5 D5 1 C5 1</textarea>
+<textarea id="notes">1 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 A3 1
+2 | G | G4 4 | C3 1 G2 1 A2 1 B2 1
+3 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 A3 1
+4 | G | G4 4 | C3 1 B2 1 A2 1 G2 1
+5 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 E3 1
+6 | C | G4 2 E4 2 | C3 1 E3 1 G3 1 E3 1
+7 | C / Am | C4 2 E4 2 | A2 1 C3 1 E3 1 A2 1
+8 | D7 / G7 | D4 4 | D3 1 F#3 1 A3 1 G3 1
+9 | G7 | R 1 E4 1 E4 1 D4 1 | G2 1 B2 1 D3 1 G3 1
+10 | C | C4 3 C4 1 | C3 1 G2 1 A2 1 B2 1
+11 | C7 | E4 2 G4 2 | C3 1 E3 1 G3 1 E3 1
+12 | F | G4 1 F4 3 | F2 1 A2 1 C3 1 E3 1
+13 | F | R 1 F4 1 E4 1 F4 1 | F2 1 A2 1 C3 1 A2 1
+14 | C / Am | G4 2 E4 2 | C3 1 E3 1 A2 1 D3 1
+15 | G7 | C4 2 D4 2 | G2 1 B2 1 D3 1 G3 1
+16 | C | C4 4 | C3 1 G2 1 C3 2</textarea>
 
 <label>Tempo (BPM): <input id="bpm" type="number" value="120" min="30" max="240"></label>
 <label>Balgens tremolo: <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
@@ -33,11 +49,11 @@ G4 0.5 A4 0.5 B4 0.5 C5 0.5 D5 1 C5 1</textarea>
 <script>
 const OFFS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const LOOKAHEAD = 0.5;   // sekunder schemalagda i förväg
-const TICK_MS = 100;     // hur ofta schemaläggaren kontrolleras
+const TICK_MS = 100;     // hur ofta schemaläggaren körs
 
 let ctx = null;
 let timer = null;
-let state = null;        // { notes, beat, bellows, passLen, nextTime, passesDone, maxPasses, endTime }
+let state = null;
 
 function toMidi(name) {
   const m = name.match(/^([A-Ga-g])(#|b)?(-?\d)$/);
@@ -48,50 +64,85 @@ function toMidi(name) {
   return v;
 }
 
-function parse(text) {
-  const t = text.split(/\s+/).filter(Boolean);
-  if (t.length === 0) throw new Error('Inga noter angivna.');
-  if (t.length % 2 !== 0) throw new Error('Varje not behöver en längd efter sig, t.ex. "C4 1".');
-  const out = [];
+// Tolkar en stämma, t.ex. "C4 1 E4 1 R 2"
+function parseVoice(str, bar) {
+  const t = str.split(/\s+/).filter(Boolean);
+  if (t.length % 2 !== 0) throw new Error(`Takt ${bar}: varje not behöver en längd, t.ex. "C4 1".`);
+  const notes = [];
+  let beats = 0;
   for (let i = 0; i < t.length; i += 2) {
     const dur = parseFloat(t[i + 1]);
-    if (!(dur > 0)) throw new Error(`Ogiltig längd efter "${t[i]}".`);
+    if (!(dur > 0)) throw new Error(`Takt ${bar}: ogiltig längd efter "${t[i]}".`);
     const isRest = /^R$/i.test(t[i]);
     const midi = isRest ? null : toMidi(t[i]);
-    if (!isRest && midi === null) throw new Error(`Ogiltig not: "${t[i]}".`);
-    out.push({ midi, dur });
+    if (!isRest && midi === null) throw new Error(`Takt ${bar}: ogiltig not "${t[i]}".`);
+    notes.push({ midi, dur });
+    beats += dur;
   }
-  return out;
+  return { notes, beats };
 }
 
-// Ett dragspelsliknande ljud: två något stämda sågvågor, en oktav upp och balgtremolo
-function voice(t, freq, dur, bellows) {
+function parseBars(text) {
+  const bars = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || !/\d/.test(line)) continue;   // hoppar över rubriker
+
+    const cells = line.split(/\t|\|/).map(s => s.trim());
+    let chord = '', melStr, basStr = '';
+    if (cells.length >= 4)      { chord = cells[1]; melStr = cells[2]; basStr = cells[3]; }
+    else if (cells.length === 3) { chord = cells[0]; melStr = cells[1]; basStr = cells[2]; }
+    else if (cells.length === 2) { melStr = cells[0]; basStr = cells[1]; }
+    else                         { melStr = cells[0]; }
+
+    const num = bars.length + 1;
+    const mel = parseVoice(melStr, num);
+    const bas = basStr ? parseVoice(basStr, num) : { notes: [], beats: mel.beats };
+    if (Math.abs(mel.beats - bas.beats) > 1e-6) {
+      throw new Error(`Takt ${num}: melodin har ${mel.beats} taktslag men basen ${bas.beats}.`);
+    }
+    bars.push({ num, chord, mel: mel.notes, bas: bas.notes, beats: mel.beats });
+  }
+  if (bars.length === 0) throw new Error('Inga takter hittades.');
+  return bars;
+}
+
+// Ett dragspelsliknande ljud. Bas använder egna klangfärger och mindre tremolo.
+function voice(t, freq, dur, bellows, isBass) {
   const end = t + dur;
+  const peak = isBass ? 0.3 : 0.35;
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, t);
-  out.gain.linearRampToValueAtTime(0.35, t + 0.02);
-  out.gain.setValueAtTime(0.35, Math.max(t + 0.03, end - 0.06));
+  out.gain.linearRampToValueAtTime(peak, t + 0.02);
+  out.gain.setValueAtTime(peak, Math.max(t + 0.03, end - 0.06));
   out.gain.linearRampToValueAtTime(0, end);
 
   const lfo = ctx.createOscillator();
   lfo.frequency.value = 5.5;
   const lfoGain = ctx.createGain();
-  lfoGain.gain.value = bellows * 0.12;
+  lfoGain.gain.value = bellows * (isBass ? 0.04 : 0.12);
   lfo.connect(lfoGain).connect(out.gain);
   lfo.start(t);
   lfo.stop(end + 0.05);
 
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = 1500 + freq;
+  lp.frequency.value = isBass ? 400 + freq * 3 : 1500 + freq;
   lp.Q.value = 2;
   out.connect(lp).connect(ctx.destination);
 
-  const reeds = [
-    { type: 'sawtooth', mult: 1, detune: -7, gain: 0.25 },
-    { type: 'sawtooth', mult: 1, detune: 7,  gain: 0.25 },
-    { type: 'square',   mult: 2, detune: 0,  gain: 0.08 },
-  ];
+  const reeds = isBass
+    ? [
+        { type: 'sawtooth', mult: 1, detune: -5, gain: 0.25 },
+        { type: 'sawtooth', mult: 1, detune: 5,  gain: 0.25 },
+        { type: 'triangle', mult: 1, detune: 0,  gain: 0.2 },
+      ]
+    : [
+        { type: 'sawtooth', mult: 1, detune: -7, gain: 0.25 },
+        { type: 'sawtooth', mult: 1, detune: 7,  gain: 0.25 },
+        { type: 'square',   mult: 2, detune: 0,  gain: 0.08 },
+      ];
+
   for (const r of reeds) {
     const o = ctx.createOscillator();
     o.type = r.type;
@@ -105,39 +156,51 @@ function voice(t, freq, dur, bellows) {
   }
 }
 
-// Spelar en genomgång av melodin med start vid t och returnerar dess längd
-function schedulePass(t, notes, beat, bellows) {
+// Spelar en stämma från starttiden t
+function playVoice(t, notes, beat, bellows, isBass) {
   let cur = t;
   for (const n of notes) {
     const d = n.dur * beat;
     if (n.midi !== null) {
-      voice(cur, 440 * 2 ** ((n.midi - 69) / 12), d, bellows);
+      voice(cur, 440 * 2 ** ((n.midi - 69) / 12), d, bellows, isBass);
     }
     cur += d;
   }
-  return cur - t;
 }
 
-// Schemaläggaren: lägger till varv så att det alltid finns ca 0.5 s framför
+// Schemaläggaren: håller alltid ca 0.5 s framför
 function tick() {
   if (!state || !ctx) return;
-  const horizon = ctx.currentTime + LOOKAHEAD;
+  const now = ctx.currentTime;
+  const horizon = now + LOOKAHEAD;
 
   while (state.nextTime < horizon) {
     if (state.maxPasses > 0 && state.passesDone >= state.maxPasses) break;
-    schedulePass(state.nextTime, state.notes, state.beat, state.bellows);
+
+    const passNo = state.passesDone + 1;
+    let cur = state.nextTime;
+    for (const bar of state.bars) {
+      // Melodi och bas startar på exakt samma tid, så takterna hänger ihop
+      playVoice(cur, bar.mel, state.beat, state.bellows, false);
+      playVoice(cur, bar.bas, state.beat, state.bellows, true);
+      state.events.push({ time: cur, pass: passNo, bar: bar.num, chord: bar.chord });
+      cur += bar.beats * state.beat;
+    }
     state.passesDone++;
-    state.nextTime += state.passLen + state.gapSec;
-    state.endTime = state.nextTime;
-    document.getElementById('status').textContent =
-      state.maxPasses > 0
-        ? `Varv ${state.passesDone} av ${state.maxPasses}`
-        : `Varv ${state.passesDone}`;
+    state.endTime = cur;
+    state.nextTime = cur + state.gapSec;
   }
 
-  // Allt är schemalagt och det sista varvet har spelat klart: städa upp
-  if (state.maxPasses > 0 && state.passesDone >= state.maxPasses &&
-      ctx.currentTime > state.endTime) {
+  // Visa takten som faktiskt hörs just nu
+  while (state.events.length && state.events[0].time <= now) {
+    const ev = state.events.shift();
+    const varv = state.maxPasses > 0 ? `Varv ${ev.pass} av ${state.maxPasses}` : `Varv ${ev.pass}`;
+    const ack = ev.chord ? ` · ${ev.chord}` : '';
+    document.getElementById('status').textContent = `${varv} · Takt ${ev.bar}${ack}`;
+  }
+
+  // Sista varvet är klart: städa upp
+  if (state.maxPasses > 0 && state.passesDone >= state.maxPasses && now > state.endTime) {
     stop();
     document.getElementById('status').textContent = 'Klar';
   }
@@ -152,9 +215,9 @@ function stop() {
 }
 
 document.getElementById('play').onclick = () => {
-  let notes;
+  let bars;
   try {
-    notes = parse(document.getElementById('notes').value);
+    bars = parseBars(document.getElementById('notes').value);
   } catch (e) {
     alert(e.message);
     return;
@@ -168,16 +231,14 @@ document.getElementById('play').onclick = () => {
   const gapBeats = Math.max(0, parseFloat(document.getElementById('gap').value) || 0);
 
   ctx = new AudioContext();
-  const passLen = notes.reduce((s, n) => s + n.dur, 0) * beat;
-
   state = {
-    notes, beat, bellows,
-    passLen,
+    bars, beat, bellows,
     gapSec: gapBeats * beat,
     nextTime: ctx.currentTime + 0.1,
     passesDone: 0,
     maxPasses: repeats,   // 0 = oändligt
     endTime: 0,
+    events: [],
   };
 
   timer = setInterval(tick, TICK_MS);
