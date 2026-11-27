@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Dragspel</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+  textarea { width: 100%; height: 120px; font-family: monospace; font-size: 1rem; }
+  button { padding: .6rem 1.2rem; font-size: 1rem; margin-right: .5rem; }
+  label { display: block; margin: .6rem 0; }
+</style>
+</head>
+<body>
+<h1>Dragspel</h1>
+<p>Skriv noter som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>.
+Längden är i taktslag (1 = kvartsnot, 0.5 = åttonot, 2 = halvnot).
+Paus skrivs som <code>R</code>, t.ex. <code>R 1</code>. Halvtonsteg: <code>F#3</code> eller <code>Bb3</code>.</p>
+
+<textarea id="notes">C4 1 E4 1 G4 1 C5 2
+G4 0.5 A4 0.5 B4 0.5 C5 0.5 D5 1 C5 1</textarea>
+
+<label>Tempo (BPM): <input id="bpm" type="number" value="120" min="30" max="240"></label>
+<label>Balgens tremolo: <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
+
+<button id="play">Spela</button>
+<button id="stop">Stoppa</button>
+
+<script>
+const OFFS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+let ctx = null;
+
+function toMidi(name) {
+  const m = name.match(/^([A-Ga-g])(#|b)?(-?\d)$/);
+  if (!m) return null;
+  let v = (parseInt(m[3]) + 1) * 12 + OFFS[m[1].toUpperCase()];
+  if (m[2] === '#') v++;
+  if (m[2] === 'b') v--;
+  return v;
+}
+
+function parse(text) {
+  const t = text.split(/\s+/).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < t.length; i += 2) {
+    const dur = parseFloat(t[i + 1]);
+    if (!(dur > 0)) throw new Error(`Saknar längd efter "${t[i]}"`);
+    const isRest = /^R$/i.test(t[i]);
+    const midi = isRest ? null : toMidi(t[i]);
+    if (!isRest && midi === null) throw new Error(`Ogiltig not: "${t[i]}"`);
+    out.push({ midi, dur });
+  }
+  return out;
+}
+
+// Ett "dragspelsröst": två något detunerade sågvågor (musette-stil) plus en oktav upp
+function voice(t, freq, dur, bellows) {
+  const end = t + dur;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0, t);
+  out.gain.linearRampToValueAtTime(0.35, t + 0.05);
+  out.gain.setValueAtTime(0.35, Math.max(t + 0.06, end - 0.08));
+  out.gain.linearRampToValueAtTime(0, end);
+
+  // Balgens tremolo: en långsam LFO som moduleras in i volymen
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 5.5;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = bellows * 0.12;
+  lfo.connect(lfoGain).connect(out.gain);
+  lfo.start(t);
+  lfo.stop(end + 0.1);
+
+  // Filter som gör tonen mjukare, mer lik ett riktigt instrument
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 1500 + freq;
+  lp.Q.value = 2;
+  out.connect(lp).connect(ctx.destination);
+
+  const reeds = [
+    { type: 'sawtooth', mult: 1, detune: -7, gain: 0.25 },
+    { type: 'sawtooth', mult: 1, detune: 7,  gain: 0.25 },
+    { type: 'square',   mult: 2, detune: 0,  gain: 0.08 },
+  ];
+  for (const r of reeds) {
+    const o = ctx.createOscillator();
+    o.type = r.type;
+    o.frequency.value = freq * r.mult;
+    o.detune.value = r.detune;
+    const g = ctx.createGain();
+    g.gain.value = r.gain;
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(end + 0.1);
+  }
+}
+
+function stop() {
+  if (ctx) { ctx.close(); ctx = null; }
+}
+
+document.getElementById('play').onclick = () => {
+  let notes;
+  try {
+    notes = parse(document.getElementById('notes').value);
+  } catch (e) {
+    alert(e.message);
+    return;
+  }
+  stop();
+  ctx = new AudioContext();
+  const beat = 60 / parseFloat(document.getElementById('bpm').value);
+  const bellows = parseFloat(document.getElementById('bellows').value);
+  let t = ctx.currentTime + 0.1;
+  for (const n of notes) {
+    const d = n.dur * beat;
+    if (n.midi !== null) {
+      voice(t, 440 * 2 ** ((n.midi - 69) / 12), d, bellows);
+    }
+    t += d;
+  }
+};
+
+document.getElementById('stop').onclick = stop;
+</script>
+</body>
+</html>
