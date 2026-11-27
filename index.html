@@ -4,11 +4,14 @@
 <meta charset="UTF-8">
 <title>Dragspel</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 680px; margin: 2rem auto; padding: 0 1rem; }
+  body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
   textarea { width: 100%; height: 300px; font-family: monospace; font-size: .95rem; box-sizing: border-box; }
   button { padding: .6rem 1.2rem; font-size: 1rem; margin-right: .5rem; }
   label { display: block; margin: .6rem 0; }
   input[type=number] { width: 5rem; }
+  select { font-size: 1rem; padding: .2rem; }
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .row label { margin: .3rem 0; }
   #status { margin-top: 1rem; font-weight: 600; min-height: 1.2em; }
 </style>
 </head>
@@ -17,28 +20,60 @@
 <p>Skriv en rad per takt: <code>Takt | Ackord | Melodi | Bas</code>.<br>
 Noter skrivs som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>. Paus: <code>R 1</code>.
 Längden är i taktslag. Melodi och bas på samma rad spelas samtidigt och ska summera till samma antal taktslag.
-Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubriker) hoppas över.
-Skriver du bara <code>Melodi | Bas</code> eller bara melodin fungerar det också.</p>
+Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubriker) hoppas över.</p>
 
-<textarea id="notes">1 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 A3 1
-2 | G | G4 4 | C3 1 G2 1 A2 1 B2 1
-3 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 A3 1
-4 | G | G4 4 | C3 1 B2 1 A2 1 G2 1
-5 | C | R 1 C4 1 E4 1 F4 1 | C3 1 E3 1 G3 1 E3 1
-6 | C | G4 2 E4 2 | C3 1 E3 1 G3 1 E3 1
-7 | C / Am | C4 2 E4 2 | A2 1 C3 1 E3 1 A2 1
-8 | D7 / G7 | D4 4 | D3 1 F#3 1 A3 1 G3 1
-9 | G7 | R 1 E4 1 E4 1 D4 1 | G2 1 B2 1 D3 1 G3 1
-10 | C | C4 3 C4 1 | C3 1 G2 1 A2 1 B2 1
-11 | C7 | E4 2 G4 2 | C3 1 E3 1 G3 1 E3 1
-12 | F | G4 1 F4 3 | F2 1 A2 1 C3 1 E3 1
-13 | F | R 1 F4 1 E4 1 F4 1 | F2 1 A2 1 C3 1 A2 1
-14 | C / Am | G4 2 E4 2 | C3 1 E3 1 A2 1 D3 1
-15 | G7 | C4 2 D4 2 | G2 1 B2 1 D3 1 G3 1
-16 | C | C4 4 | C3 1 G2 1 C3 2</textarea>
+<textarea id="notes">1 | Fm | F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 F4 0.5 Eb4 0.5 F4 1 | F2 1 F3 1 F2 1 C3 1
+2 | Fm | R 1 R 0.5 F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 R 0.5 | F2 1 F3 1 F2 1 C3 1
+3 | Fm | F4 0.5 Eb4 1 R 2.5 | F2 1 F3 1 F2 1 C3 1
+4 | Eb | R 1 F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 R 1 | Eb2 1 Eb3 1 Eb2 1 Bb2 1
+5 | Fm | F4 0.5 Eb4 0.5 F4 1 R 2 | F2 1 F3 1 F2 1 C3 1
+6 | Fm | R 0.5 Ab4 0.5 G4 0.5 F4 0.5 Eb4 0.5 F4 1.5 | F2 1 F3 1 F2 1 C3 1
+7 | Fm | R 0.5 F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 F4 0.5 R 1 | F2 1 F3 1 F2 1 C3 1
+8 | Eb | Eb4 0.5 F4 1.5 R 2 | Eb2 1 Eb3 1 Eb2 1 Bb2 1
+9 | Fm | F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 F4 0.5 Eb4 0.5 F4 1 | F2 1 F3 1 F2 1 C3 1
+10 | Fm | R 0.5 R 0.5 Ab4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 R 1 | F2 1 F3 1 F2 1 C3 1
+11 | Db | F4 1.5 R 0.5 F4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 | Db2 1 Db3 1 Db2 1 Ab2 1
+12 | Eb | F4 0.5 Eb4 0.5 F4 1.5 R 1.5 | Eb2 1 Eb3 1 Eb2 1 Bb2 1
+13 | Fm | R 0.5 Ab4 0.5 Ab4 0.5 Bb4 0.5 Ab4 0.5 Eb4 1.5 | F2 1 F3 1 F2 1 C3 1
+14 | Fm | R 4 | F2 1 F3 1 F2 1 C3 1
+15 | Db | R 4 | Db2 1 Db3 1 Db2 1 Ab2 1
+16 | Eb / C | R 4 | Eb2 1 Eb3 1 C3 2</textarea>
+
+<div class="row">
+  <label>Melodi:
+    <select id="melInst">
+      <option value="accordion" selected>Dragspel</option>
+      <option value="trumpet">Trumpet</option>
+      <option value="harmonica">Munspel</option>
+      <option value="saxophone">Saxofon</option>
+    </select>
+  </label>
+  <label>Bas:
+    <select id="basInst">
+      <option value="accordion" selected>Dragspel</option>
+      <option value="trumpet">Trumpet</option>
+      <option value="harmonica">Munspel</option>
+      <option value="saxophone">Saxofon</option>
+    </select>
+  </label>
+  <label>Trummor:
+    <select id="drumStyle">
+      <option value="off">Av</option>
+      <option value="rock" selected>Rock 4/4</option>
+      <option value="polka">Polka</option>
+      <option value="swing">Swing</option>
+    </select>
+  </label>
+</div>
+
+<div class="row">
+  <label>Volym melodi: <input id="melVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
+  <label>Volym bas: <input id="basVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
+  <label>Volym trummor: <input id="drumVol" type="range" min="0" max="1.5" step="0.05" value="0.8"></label>
+</div>
 
 <label>Tempo (BPM): <input id="bpm" type="number" value="120" min="30" max="240"></label>
-<label>Balgens tremolo: <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
+<label>Balgens tremolo (dragspel): <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
 <label>Antal varv: <input id="repeats" type="number" value="0" min="0" max="999"> (0 = oändligt)</label>
 <label>Paus mellan varv (taktslag): <input id="gap" type="number" value="0" min="0" max="16" step="0.5"></label>
 
@@ -51,7 +86,66 @@ const OFFS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const LOOKAHEAD = 0.5;   // sekunder schemalagda i förväg
 const TICK_MS = 100;     // hur ofta schemaläggaren körs
 
+// Klangprofiler för varje instrument
+const INST = {
+  accordion: {
+    peak: 0.35, attack: 0.02, release: 0.06,
+    lp: 1500, lpK: 1, sweep: 0,
+    vibRate: 0, vibCents: 0,
+    reeds: [
+      { type: 'sawtooth', mult: 1, detune: -7, gain: 0.25 },
+      { type: 'sawtooth', mult: 1, detune: 7,  gain: 0.25 },
+      { type: 'square',   mult: 2, detune: 0,  gain: 0.08 },
+    ],
+  },
+  trumpet: {
+    peak: 0.28, attack: 0.03, release: 0.08,
+    lp: 900, lpK: 1.2, sweep: 1800,
+    vibRate: 5.5, vibCents: 12,
+    reeds: [
+      { type: 'sawtooth', mult: 1, detune: 0, gain: 0.3 },
+      { type: 'square',   mult: 1, detune: 4, gain: 0.1 },
+    ],
+  },
+  harmonica: {
+    peak: 0.3, attack: 0.015, release: 0.05,
+    lp: 1800, lpK: 0.5, sweep: 0,
+    vibRate: 6, vibCents: 6,
+    reeds: [
+      { type: 'square',   mult: 1, detune: 0,  gain: 0.15 },
+      { type: 'sawtooth', mult: 1, detune: -4, gain: 0.12 },
+      { type: 'sine',     mult: 2, detune: 0,  gain: 0.12 },
+    ],
+  },
+  saxophone: {
+    peak: 0.3, attack: 0.06, release: 0.1,
+    lp: 700, lpK: 1.5, sweep: 1000,
+    vibRate: 5, vibCents: 18,
+    reeds: [
+      { type: 'sawtooth', mult: 1, detune: -3, gain: 0.22 },
+      { type: 'square',   mult: 1, detune: 3,  gain: 0.1 },
+    ],
+  },
+};
+
+// Trummönster: [position i takten i taktslag, typ]. k = bastrumma, s = virveltrumma, h = hi-hat
+const PATTERNS = {
+  rock: [
+    [0,'k'], [2,'k'], [1,'s'], [3,'s'],
+    [0,'h'], [0.5,'h'], [1,'h'], [1.5,'h'], [2,'h'], [2.5,'h'], [3,'h'], [3.5,'h'],
+  ],
+  polka: [
+    [0,'k'], [1,'k'], [2,'k'], [3,'k'], [1,'s'], [3,'s'],
+    [0.5,'h'], [1.5,'h'], [2.5,'h'], [3.5,'h'],
+  ],
+  swing: [
+    [0,'k'], [2,'k'], [1,'s'], [3,'s'],
+    [0,'h'], [0.667,'h'], [1,'h'], [1.667,'h'], [2,'h'], [2.667,'h'], [3,'h'], [3.667,'h'],
+  ],
+};
+
 let ctx = null;
+let noiseBuf = null;
 let timer = null;
 let state = null;
 
@@ -90,7 +184,7 @@ function parseBars(text) {
 
     const cells = line.split(/\t|\|/).map(s => s.trim());
     let chord = '', melStr, basStr = '';
-    if (cells.length >= 4)      { chord = cells[1]; melStr = cells[2]; basStr = cells[3]; }
+    if (cells.length >= 4)       { chord = cells[1]; melStr = cells[2]; basStr = cells[3]; }
     else if (cells.length === 3) { chord = cells[0]; melStr = cells[1]; basStr = cells[2]; }
     else if (cells.length === 2) { melStr = cells[0]; basStr = cells[1]; }
     else                         { melStr = cells[0]; }
@@ -107,47 +201,57 @@ function parseBars(text) {
   return bars;
 }
 
-// Ett dragspelsliknande ljud. Bas använder egna klangfärger och mindre tremolo.
-function voice(t, freq, dur, bellows, isBass) {
+// Ett instrument: en ton. inst = nyckel i INST, vol = volymmultiplikator
+function voice(t, freq, dur, bellows, inst, isBass, vol) {
+  const p = INST[inst];
   const end = t + dur;
-  const peak = isBass ? 0.3 : 0.35;
+  const peak = p.peak * vol * (isBass ? 0.85 : 1);
+  const a = Math.min(p.attack, dur * 0.4);
+
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, t);
-  out.gain.linearRampToValueAtTime(peak, t + 0.02);
-  out.gain.setValueAtTime(peak, Math.max(t + 0.03, end - 0.06));
+  out.gain.linearRampToValueAtTime(peak, t + a);
+  out.gain.setValueAtTime(peak, Math.max(t + a + 0.01, end - p.release));
   out.gain.linearRampToValueAtTime(0, end);
 
-  const lfo = ctx.createOscillator();
-  lfo.frequency.value = 5.5;
-  const lfoGain = ctx.createGain();
-  lfoGain.gain.value = bellows * (isBass ? 0.04 : 0.12);
-  lfo.connect(lfoGain).connect(out.gain);
-  lfo.start(t);
-  lfo.stop(end + 0.05);
+  // Balgtremolo, bara för dragspel
+  if (inst === 'accordion') {
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 5.5;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = bellows * (isBass ? 0.04 : 0.12);
+    lfo.connect(lfoGain).connect(out.gain);
+    lfo.start(t);
+    lfo.stop(end + 0.05);
+  }
 
+  // Filter, eventuellt med öppnande "attack" (trumpet, sax)
+  const cutoff = isBass ? 400 + freq * 3 : p.lp + freq * p.lpK;
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = isBass ? 400 + freq * 3 : 1500 + freq;
   lp.Q.value = 2;
+  lp.frequency.setValueAtTime(cutoff, t);
+  if (p.sweep) lp.frequency.linearRampToValueAtTime(cutoff + p.sweep, t + a * 3);
   out.connect(lp).connect(ctx.destination);
 
-  const reeds = isBass
-    ? [
-        { type: 'sawtooth', mult: 1, detune: -5, gain: 0.25 },
-        { type: 'sawtooth', mult: 1, detune: 5,  gain: 0.25 },
-        { type: 'triangle', mult: 1, detune: 0,  gain: 0.2 },
-      ]
-    : [
-        { type: 'sawtooth', mult: 1, detune: -7, gain: 0.25 },
-        { type: 'sawtooth', mult: 1, detune: 7,  gain: 0.25 },
-        { type: 'square',   mult: 2, detune: 0,  gain: 0.08 },
-      ];
+  // Vibrato (tonhöjdsmodulering i cent)
+  let vibGain = null;
+  if (p.vibRate > 0) {
+    const vib = ctx.createOscillator();
+    vib.frequency.value = p.vibRate;
+    vibGain = ctx.createGain();
+    vibGain.gain.value = p.vibCents;
+    vib.connect(vibGain);
+    vib.start(t);
+    vib.stop(end + 0.05);
+  }
 
-  for (const r of reeds) {
+  for (const r of p.reeds) {
     const o = ctx.createOscillator();
     o.type = r.type;
     o.frequency.value = freq * r.mult;
     o.detune.value = r.detune;
+    if (vibGain) vibGain.connect(o.detune);
     const g = ctx.createGain();
     g.gain.value = r.gain;
     o.connect(g).connect(out);
@@ -157,14 +261,65 @@ function voice(t, freq, dur, bellows, isBass) {
 }
 
 // Spelar en stämma från starttiden t
-function playVoice(t, notes, beat, bellows, isBass) {
+function playVoice(t, notes, beat, bellows, inst, isBass, vol) {
   let cur = t;
   for (const n of notes) {
     const d = n.dur * beat;
     if (n.midi !== null) {
-      voice(cur, 440 * 2 ** ((n.midi - 69) / 12), d, bellows, isBass);
+      voice(cur, 440 * 2 ** ((n.midi - 69) / 12), d, bellows, inst, isBass, vol);
     }
     cur += d;
+  }
+}
+
+// Trummor
+function makeNoise(c) {
+  const buf = c.createBuffer(1, c.sampleRate, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function kick(t, v) {
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  o.connect(g).connect(ctx.destination);
+  o.start(t);
+  o.stop(t + 0.35);
+}
+
+function noiseHit(t, v, hpFreq, decay) {
+  const n = ctx.createBufferSource();
+  n.buffer = noiseBuf;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = hpFreq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  n.connect(hp).connect(g).connect(ctx.destination);
+  n.start(t, Math.random() * 0.5);
+  n.stop(t + decay + 0.02);
+}
+
+function snare(t, v) { noiseHit(t, v * 0.6, 1200, 0.18); }
+function hat(t, v)   { noiseHit(t, v * 0.2, 7000, 0.05); }
+
+// Spelar ett trummönster för en takt
+function playDrums(t0, beats, style, beat, vol) {
+  const pat = PATTERNS[style];
+  if (!pat) return;
+  for (const [off, kind] of pat) {
+    if (off >= beats) continue;
+    const t = t0 + off * beat;
+    if (kind === 'k') kick(t, vol);
+    else if (kind === 's') snare(t, vol);
+    else hat(t, vol);
   }
 }
 
@@ -180,9 +335,9 @@ function tick() {
     const passNo = state.passesDone + 1;
     let cur = state.nextTime;
     for (const bar of state.bars) {
-      // Melodi och bas startar på exakt samma tid, så takterna hänger ihop
-      playVoice(cur, bar.mel, state.beat, state.bellows, false);
-      playVoice(cur, bar.bas, state.beat, state.bellows, true);
+      playVoice(cur, bar.mel, state.beat, state.bellows, state.melInst, false, state.melVol);
+      playVoice(cur, bar.bas, state.beat, state.bellows, state.basInst, true, state.basVol);
+      playDrums(cur, bar.beats, state.drumStyle, state.beat, state.drumVol);
       state.events.push({ time: cur, pass: passNo, bar: bar.num, chord: bar.chord });
       cur += bar.beats * state.beat;
     }
@@ -191,7 +346,7 @@ function tick() {
     state.nextTime = cur + state.gapSec;
   }
 
-  // Visa takten som faktiskt hörs just nu
+  // Visa takten som hörs just nu
   while (state.events.length && state.events[0].time <= now) {
     const ev = state.events.shift();
     const varv = state.maxPasses > 0 ? `Varv ${ev.pass} av ${state.maxPasses}` : `Varv ${ev.pass}`;
@@ -199,7 +354,7 @@ function tick() {
     document.getElementById('status').textContent = `${varv} · Takt ${ev.bar}${ack}`;
   }
 
-  // Sista varvet är klart: städa upp
+  // Sista varvet är klart
   if (state.maxPasses > 0 && state.passesDone >= state.maxPasses && now > state.endTime) {
     stop();
     document.getElementById('status').textContent = 'Klar';
@@ -224,19 +379,26 @@ document.getElementById('play').onclick = () => {
   }
   stop();
 
-  const bpm = parseFloat(document.getElementById('bpm').value) || 120;
+  const val = id => document.getElementById(id).value;
+  const bpm = parseFloat(val('bpm')) || 120;
   const beat = 60 / bpm;
-  const bellows = parseFloat(document.getElementById('bellows').value);
-  const repeats = Math.max(0, parseInt(document.getElementById('repeats').value) || 0);
-  const gapBeats = Math.max(0, parseFloat(document.getElementById('gap').value) || 0);
 
   ctx = new AudioContext();
+  noiseBuf = makeNoise(ctx);
+
   state = {
-    bars, beat, bellows,
-    gapSec: gapBeats * beat,
+    bars, beat,
+    bellows: parseFloat(val('bellows')),
+    melInst: val('melInst'),
+    basInst: val('basInst'),
+    drumStyle: val('drumStyle'),
+    melVol: parseFloat(val('melVol')),
+    basVol: parseFloat(val('basVol')),
+    drumVol: parseFloat(val('drumVol')),
+    gapSec: Math.max(0, parseFloat(val('gap')) || 0) * beat,
     nextTime: ctx.currentTime + 0.1,
     passesDone: 0,
-    maxPasses: repeats,   // 0 = oändligt
+    maxPasses: Math.max(0, parseInt(val('repeats')) || 0),
     endTime: 0,
     events: [],
   };
