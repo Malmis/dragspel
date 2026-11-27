@@ -2,7 +2,7 @@
 
 A browser-based tool that plays melodies, bass lines, and drums from notes you type into a text box. All sound is synthesized in the browser with the Web Audio API, so no audio files are needed and nothing needs to be installed.
 
-Languages: Swedish and English (choose in the dropdown at the top of the page).
+Languages: Swedish and English. The page picks the language automatically from your browser's language setting: if the first preferred language is English, the page shows English, otherwise Swedish. You can always change the language in the dropdown at the top of the page.
 
 🇸🇪 Läs den här på svenska: [README.md](README.md)
 
@@ -22,7 +22,7 @@ Sound starts only after you click a button. This is a browser safety rule, so if
 
 | Part | What it does |
 |---|---|
-| **Language selector** | Switches between Swedish and English. All text, instruments, and error messages change. |
+| **Language selector** | Switches between Swedish and English. The language is chosen automatically at startup from your browser's language setting (English gives English, otherwise Swedish). All text, instruments, and error messages change. |
 | **Text box** | Where you write the notes, one line per bar. |
 | **Melody** | Instrument for the upper part: Accordion, Trumpet, Harmonica, or Saxophone. |
 | **Bass** | Instrument for the lower part, with the same choices. |

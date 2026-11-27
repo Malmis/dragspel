@@ -2,7 +2,7 @@
 
 Ett webbaserat verktyg som spelar upp melodier, basgångar och trummor utifrån noter som du skriver in i en textruta. Allt ljud syntetiseras i webbläsaren med Web Audio API, så inga ljudfiler behövs och ingen installation krävs.
 
-Språk: svenska och English (väljs i rullistan högst upp på sidan).
+Språk: svenska och English. Sidan väljer språk automatiskt utifrån webbläsarens språkinställning: om den första språkinställningen är engelska visas English, annars svenska. Du kan alltid byta språk i rullistan högst upp på sidan.
 
 🇬🇧 Read this in English: [README.en.md](README.en.md)
 
@@ -22,7 +22,7 @@ Ljudet startar först när du klickar på en knapp. Det är en säkerhetsregel i
 
 | Del | Vad den gör |
 |---|---|
-| **Språkväxlare** | Byter mellan Svenska och English. Alla texter, instrument och felmeddelanden byts. |
+| **Språkväxlare** | Byter mellan Svenska och English. Språket väljs automatiskt vid start efter webbläsarens språkinställning (engelska ger English, annars svenska). Alla texter, instrument och felmeddelanden byts. |
 | **Textrutan** | Här skriver du noterna, en rad per takt. |
 | **Melodi** | Instrument för den övre stämman: Dragspel, Trumpet, Munspel eller Saxofon. |
 | **Bas** | Instrument för den undre stämman, med samma val. |
