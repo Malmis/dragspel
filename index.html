@@ -5,9 +5,11 @@
 <title>Dragspel</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-  textarea { width: 100%; height: 120px; font-family: monospace; font-size: 1rem; }
+  textarea { width: 100%; height: 120px; font-family: monospace; font-size: 1rem; box-sizing: border-box; }
   button { padding: .6rem 1.2rem; font-size: 1rem; margin-right: .5rem; }
   label { display: block; margin: .6rem 0; }
+  input[type=number] { width: 5rem; }
+  #status { margin-top: 1rem; font-weight: 600; min-height: 1.2em; }
 </style>
 </head>
 <body>
@@ -21,16 +23,21 @@ G4 0.5 A4 0.5 B4 0.5 C5 0.5 D5 1 C5 1</textarea>
 
 <label>Tempo (BPM): <input id="bpm" type="number" value="120" min="30" max="240"></label>
 <label>Balgens tremolo: <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
-<label><input id="loop" type="checkbox" checked> Loopa</label>
+<label>Antal varv: <input id="repeats" type="number" value="0" min="0" max="999"> (0 = oändligt)</label>
+<label>Paus mellan varv (taktslag): <input id="gap" type="number" value="0" min="0" max="16" step="0.5"></label>
 
 <button id="play">Spela</button>
 <button id="stop">Stoppa</button>
+<div id="status"></div>
 
 <script>
 const OFFS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const LOOKAHEAD = 0.5;   // sekunder schemalagda i förväg
+const TICK_MS = 100;     // hur ofta schemaläggaren kontrolleras
+
 let ctx = null;
-let loopTimer = null;
-let playing = false;
+let timer = null;
+let state = null;        // { notes, beat, bellows, passLen, nextTime, passesDone, maxPasses, endTime }
 
 function toMidi(name) {
   const m = name.match(/^([A-Ga-g])(#|b)?(-?\d)$/);
@@ -43,35 +50,36 @@ function toMidi(name) {
 
 function parse(text) {
   const t = text.split(/\s+/).filter(Boolean);
+  if (t.length === 0) throw new Error('Inga noter angivna.');
+  if (t.length % 2 !== 0) throw new Error('Varje not behöver en längd efter sig, t.ex. "C4 1".');
   const out = [];
   for (let i = 0; i < t.length; i += 2) {
     const dur = parseFloat(t[i + 1]);
-    if (!(dur > 0)) throw new Error(`Saknar längd efter "${t[i]}"`);
+    if (!(dur > 0)) throw new Error(`Ogiltig längd efter "${t[i]}".`);
     const isRest = /^R$/i.test(t[i]);
     const midi = isRest ? null : toMidi(t[i]);
-    if (!isRest && midi === null) throw new Error(`Ogiltig not: "${t[i]}"`);
+    if (!isRest && midi === null) throw new Error(`Ogiltig not: "${t[i]}".`);
     out.push({ midi, dur });
   }
   return out;
 }
 
-// Ett "dragspelsröst": två något detunerade sågvågor plus en oktav upp
+// Ett dragspelsliknande ljud: två något stämda sågvågor, en oktav upp och balgtremolo
 function voice(t, freq, dur, bellows) {
   const end = t + dur;
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, t);
-  out.gain.linearRampToValueAtTime(0.35, t + 0.05);
-  out.gain.setValueAtTime(0.35, Math.max(t + 0.06, end - 0.08));
+  out.gain.linearRampToValueAtTime(0.35, t + 0.02);
+  out.gain.setValueAtTime(0.35, Math.max(t + 0.03, end - 0.06));
   out.gain.linearRampToValueAtTime(0, end);
 
-  // Balgens tremolo
   const lfo = ctx.createOscillator();
   lfo.frequency.value = 5.5;
   const lfoGain = ctx.createGain();
   lfoGain.gain.value = bellows * 0.12;
   lfo.connect(lfoGain).connect(out.gain);
   lfo.start(t);
-  lfo.stop(end + 0.1);
+  lfo.stop(end + 0.05);
 
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
@@ -93,28 +101,54 @@ function voice(t, freq, dur, bellows) {
     g.gain.value = r.gain;
     o.connect(g).connect(out);
     o.start(t);
-    o.stop(end + 0.1);
+    o.stop(end + 0.05);
   }
 }
 
-// Schemalägger en hel genomgång av noterna och returnerar dess längd i sekunder
-function schedulePass(startTime, notes, beat, bellows) {
-  let t = startTime;
+// Spelar en genomgång av melodin med start vid t och returnerar dess längd
+function schedulePass(t, notes, beat, bellows) {
+  let cur = t;
   for (const n of notes) {
     const d = n.dur * beat;
     if (n.midi !== null) {
-      voice(t, 440 * 2 ** ((n.midi - 69) / 12), d, bellows);
+      voice(cur, 440 * 2 ** ((n.midi - 69) / 12), d, bellows);
     }
-    t += d;
+    cur += d;
   }
-  return t - startTime;
+  return cur - t;
+}
+
+// Schemaläggaren: lägger till varv så att det alltid finns ca 0.5 s framför
+function tick() {
+  if (!state || !ctx) return;
+  const horizon = ctx.currentTime + LOOKAHEAD;
+
+  while (state.nextTime < horizon) {
+    if (state.maxPasses > 0 && state.passesDone >= state.maxPasses) break;
+    schedulePass(state.nextTime, state.notes, state.beat, state.bellows);
+    state.passesDone++;
+    state.nextTime += state.passLen + state.gapSec;
+    state.endTime = state.nextTime;
+    document.getElementById('status').textContent =
+      state.maxPasses > 0
+        ? `Varv ${state.passesDone} av ${state.maxPasses}`
+        : `Varv ${state.passesDone}`;
+  }
+
+  // Allt är schemalagt och det sista varvet har spelat klart: städa upp
+  if (state.maxPasses > 0 && state.passesDone >= state.maxPasses &&
+      ctx.currentTime > state.endTime) {
+    stop();
+    document.getElementById('status').textContent = 'Klar';
+  }
 }
 
 function stop() {
-  playing = false;
-  clearTimeout(loopTimer);
-  loopTimer = null;
+  clearInterval(timer);
+  timer = null;
+  state = null;
   if (ctx) { ctx.close(); ctx = null; }
+  document.getElementById('status').textContent = '';
 }
 
 document.getElementById('play').onclick = () => {
@@ -126,28 +160,28 @@ document.getElementById('play').onclick = () => {
     return;
   }
   stop();
-  ctx = new AudioContext();
-  playing = true;
-  const beat = 60 / parseFloat(document.getElementById('bpm').value);
+
+  const bpm = parseFloat(document.getElementById('bpm').value) || 120;
+  const beat = 60 / bpm;
   const bellows = parseFloat(document.getElementById('bellows').value);
-  const loop = document.getElementById('loop').checked;
+  const repeats = Math.max(0, parseInt(document.getElementById('repeats').value) || 0);
+  const gapBeats = Math.max(0, parseFloat(document.getElementById('gap').value) || 0);
 
-  const passLength = schedulePass(ctx.currentTime + 0.1, notes, beat, bellows);
+  ctx = new AudioContext();
+  const passLen = notes.reduce((s, n) => s + n.dur, 0) * beat;
 
-  if (loop) {
-    // Schemalägg nästa genomgång lite innan den nuvarande är slut
-    const scheduleNext = () => {
-      if (!playing || !ctx) return;
-      const nextStart = ctx.currentTime + passLength - 0.5;
-      const wait = Math.max(0, (nextStart - ctx.currentTime) * 1000);
-      loopTimer = setTimeout(() => {
-        if (!playing || !ctx) return;
-        schedulePass(Math.max(ctx.currentTime, nextStart), notes, beat, bellows);
-        scheduleNext();
-      }, wait);
-    };
-    scheduleNext();
-  }
+  state = {
+    notes, beat, bellows,
+    passLen,
+    gapSec: gapBeats * beat,
+    nextTime: ctx.currentTime + 0.1,
+    passesDone: 0,
+    maxPasses: repeats,   // 0 = oändligt
+    endTime: 0,
+  };
+
+  timer = setInterval(tick, TICK_MS);
+  tick();
 };
 
 document.getElementById('stop').onclick = stop;
