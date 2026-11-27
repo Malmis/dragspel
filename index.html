@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Dragspel</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+  body { font-family: system-ui, sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem 4rem; }
   textarea { width: 100%; height: 300px; font-family: monospace; font-size: .95rem; box-sizing: border-box; }
   button { padding: .6rem 1.2rem; font-size: 1rem; margin-right: .5rem; }
   label { display: block; margin: .6rem 0; }
@@ -12,15 +12,21 @@
   select { font-size: 1rem; padding: .2rem; }
   .row { display: flex; flex-wrap: wrap; gap: 1rem; }
   .row label { margin: .3rem 0; }
+  .lang { display: flex; justify-content: flex-end; }
   #status { margin-top: 1rem; font-weight: 600; min-height: 1.2em; }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: .6rem; font-size: .85rem; color: #666; background: rgba(255,255,255,.9); border-top: 1px solid #ddd; }
 </style>
 </head>
 <body>
+<div class="lang">
+  <label>🌐 <select id="lang">
+    <option value="sv" selected>Svenska</option>
+    <option value="en">English</option>
+  </select></label>
+</div>
+
 <h1>Dragspel</h1>
-<p>Skriv en rad per takt: <code>Takt | Ackord | Melodi | Bas</code>.<br>
-Noter skrivs som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>. Paus: <code>R 1</code>.
-Längden är i taktslag. Melodi och bas på samma rad spelas samtidigt och ska summera till samma antal taktslag.
-Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubriker) hoppas över.</p>
+<p id="intro"></p>
 
 <textarea id="notes">1 | Em | E4 0.5 E4 0.5 G4 0.5 A4 0.5 B4 1 E5 1 | E2 0.5 E2 0.5 E2 0.5 E2 0.5 E2 0.5 E2 0.5 E2 0.5 E2 0.5
 2 | C | G4 1 C5 1 B4 0.5 A4 0.5 G4 1 | C2 0.5 C2 0.5 C2 0.5 C2 0.5 C2 0.5 C2 0.5 C2 0.5 C2 0.5
@@ -40,48 +46,111 @@ Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubr
 16 | Em | E4 4 | E2 1 E2 1 E2 2</textarea>
 
 <div class="row">
-  <label>Melodi:
+  <label><span data-i18n="melody">Melodi</span>:
     <select id="melInst">
-      <option value="accordion">Dragspel</option>
-      <option value="trumpet">Trumpet</option>
-      <option value="harmonica">Munspel</option>
-      <option value="saxophone" selected>Saxofon</option>
+      <option value="accordion" data-i18n="inst.accordion">Dragspel</option>
+      <option value="trumpet" data-i18n="inst.trumpet">Trumpet</option>
+      <option value="harmonica" data-i18n="inst.harmonica">Munspel</option>
+      <option value="saxophone" selected data-i18n="inst.saxophone">Saxofon</option>
     </select>
   </label>
-  <label>Bas:
+  <label><span data-i18n="bass">Bas</span>:
     <select id="basInst">
-      <option value="accordion" selected>Dragspel</option>
-      <option value="trumpet">Trumpet</option>
-      <option value="harmonica">Munspel</option>
-      <option value="saxophone">Saxofon</option>
+      <option value="accordion" selected data-i18n="inst.accordion">Dragspel</option>
+      <option value="trumpet" data-i18n="inst.trumpet">Trumpet</option>
+      <option value="harmonica" data-i18n="inst.harmonica">Munspel</option>
+      <option value="saxophone" data-i18n="inst.saxophone">Saxofon</option>
     </select>
   </label>
-  <label>Trummor:
+  <label><span data-i18n="drums">Trummor</span>:
     <select id="drumStyle">
-      <option value="off">Av</option>
-      <option value="rock">Rock 4/4</option>
-      <option value="polka" selected>Polka</option>
-      <option value="swing">Swing</option>
+      <option value="off" data-i18n="drum.off">Av</option>
+      <option value="rock" data-i18n="drum.rock">Rock 4/4</option>
+      <option value="polka" selected data-i18n="drum.polka">Polka</option>
+      <option value="swing" data-i18n="drum.swing">Swing</option>
     </select>
   </label>
 </div>
 
 <div class="row">
-  <label>Volym melodi: <input id="melVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
-  <label>Volym bas: <input id="basVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
-  <label>Volym trummor: <input id="drumVol" type="range" min="0" max="1.5" step="0.05" value="0.8"></label>
+  <label><span data-i18n="volMel">Volym melodi</span>: <input id="melVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
+  <label><span data-i18n="volBas">Volym bas</span>: <input id="basVol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
+  <label><span data-i18n="volDrums">Volym trummor</span>: <input id="drumVol" type="range" min="0" max="1.5" step="0.05" value="0.8"></label>
 </div>
 
-<label>Tempo (BPM): <input id="bpm" type="number" value="180" min="30" max="240"></label>
-<label>Balgens tremolo (dragspel): <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
-<label>Antal varv: <input id="repeats" type="number" value="0" min="0" max="999"> (0 = oändligt)</label>
-<label>Paus mellan varv (taktslag): <input id="gap" type="number" value="0" min="0" max="16" step="0.5"></label>
+<label><span data-i18n="tempo">Tempo (BPM)</span>: <input id="bpm" type="number" value="180" min="30" max="240"></label>
+<label><span data-i18n="bellows">Balgens tremolo (dragspel)</span>: <input id="bellows" type="range" min="0" max="1" step="0.05" value="0.3"></label>
+<label><span data-i18n="repeats">Antal varv</span>: <input id="repeats" type="number" value="0" min="0" max="999"> <span data-i18n="repeatsHint">(0 = oändligt)</span></label>
+<label><span data-i18n="gap">Paus mellan varv (taktslag)</span>: <input id="gap" type="number" value="0" min="0" max="16" step="0.5"></label>
 
-<button id="play">Spela</button>
-<button id="stop">Stoppa</button>
+<button id="play" data-i18n="play">Spela</button>
+<button id="stop" data-i18n="stop">Stoppa</button>
 <div id="status"></div>
 
+<footer>Created with Claude by Malmis</footer>
+
 <script>
+// ---------- Språk ----------
+const TEXT = {
+  sv: {
+    intro: 'Skriv en rad per takt: <code>Takt | Ackord | Melodi | Bas</code>.<br>Noter skrivs som <code>Namn+oktav längd</code>, t.ex. <code>C4 1</code>. Paus: <code>R 1</code>. Längden är i taktslag. Melodi och bas på samma rad spelas samtidigt och ska summera till samma antal taktslag. Kolumnerna kan separeras med <code>|</code> eller tabb. Rader utan siffror (rubriker) hoppas över.',
+    melody: 'Melodi', bass: 'Bas', drums: 'Trummor',
+    'inst.accordion': 'Dragspel', 'inst.trumpet': 'Trumpet', 'inst.harmonica': 'Munspel', 'inst.saxophone': 'Saxofon',
+    'drum.off': 'Av', 'drum.rock': 'Rock 4/4', 'drum.polka': 'Polka', 'drum.swing': 'Swing',
+    volMel: 'Volym melodi', volBas: 'Volym bas', volDrums: 'Volym trummor',
+    tempo: 'Tempo (BPM)', bellows: 'Balgens tremolo (dragspel)', repeats: 'Antal varv',
+    repeatsHint: '(0 = oändligt)', gap: 'Paus mellan varv (taktslag)',
+    play: 'Spela', stop: 'Stoppa',
+    pass: n => `Varv ${n}`,
+    passOf: (n, m) => `Varv ${n} av ${m}`,
+    bar: n => `Takt ${n}`,
+    done: 'Klar',
+    errNoBars: 'Inga takter hittades.',
+    errLenMissing: bar => `Takt ${bar}: varje not behöver en längd, t.ex. "C4 1".`,
+    errLenInvalid: (bar, tok) => `Takt ${bar}: ogiltig längd efter "${tok}".`,
+    errNote: (bar, tok) => `Takt ${bar}: ogiltig not "${tok}".`,
+    errBeats: (bar, m, b) => `Takt ${bar}: melodin har ${m} taktslag men basen ${b}.`,
+  },
+  en: {
+    intro: 'Write one line per bar: <code>Bar | Chord | Melody | Bass</code>.<br>Notes are written as <code>Name+octave length</code>, e.g. <code>C4 1</code>. Rest: <code>R 1</code>. Length is in beats. Melody and bass on the same line play at the same time and must add up to the same number of beats. Columns can be separated by <code>|</code> or tab. Lines without numbers (headers) are skipped.',
+    melody: 'Melody', bass: 'Bass', drums: 'Drums',
+    'inst.accordion': 'Accordion', 'inst.trumpet': 'Trumpet', 'inst.harmonica': 'Harmonica', 'inst.saxophone': 'Saxophone',
+    'drum.off': 'Off', 'drum.rock': 'Rock 4/4', 'drum.polka': 'Polka', 'drum.swing': 'Swing',
+    volMel: 'Melody volume', volBas: 'Bass volume', volDrums: 'Drum volume',
+    tempo: 'Tempo (BPM)', bellows: 'Bellows tremolo (accordion)', repeats: 'Repeats',
+    repeatsHint: '(0 = infinite)', gap: 'Pause between repeats (beats)',
+    play: 'Play', stop: 'Stop',
+    pass: n => `Pass ${n}`,
+    passOf: (n, m) => `Pass ${n} of ${m}`,
+    bar: n => `Bar ${n}`,
+    done: 'Done',
+    errNoBars: 'No bars found.',
+    errLenMissing: bar => `Bar ${bar}: every note needs a length, e.g. "C4 1".`,
+    errLenInvalid: (bar, tok) => `Bar ${bar}: invalid length after "${tok}".`,
+    errNote: (bar, tok) => `Bar ${bar}: invalid note "${tok}".`,
+    errBeats: (bar, m, b) => `Bar ${bar}: melody has ${m} beats but bass has ${b}.`,
+  },
+};
+
+let lang = 'sv';
+const t = (key, ...args) => {
+  const v = TEXT[lang][key];
+  return typeof v === 'function' ? v(...args) : v;
+};
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.getElementById('intro').innerHTML = t('intro');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+}
+
+document.getElementById('lang').onchange = e => {
+  lang = e.target.value;
+  applyLang();
+};
+
 const OFFS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const LOOKAHEAD = 0.5;   // sekunder schemalagda i förväg
 const TICK_MS = 100;     // hur ofta schemaläggaren körs
@@ -160,16 +229,16 @@ function toMidi(name) {
 
 // Tolkar en stämma, t.ex. "C4 1 E4 1 R 2"
 function parseVoice(str, bar) {
-  const t = str.split(/\s+/).filter(Boolean);
-  if (t.length % 2 !== 0) throw new Error(`Takt ${bar}: varje not behöver en längd, t.ex. "C4 1".`);
+  const tok = str.split(/\s+/).filter(Boolean);
+  if (tok.length % 2 !== 0) throw new Error(t('errLenMissing', bar));
   const notes = [];
   let beats = 0;
-  for (let i = 0; i < t.length; i += 2) {
-    const dur = parseFloat(t[i + 1]);
-    if (!(dur > 0)) throw new Error(`Takt ${bar}: ogiltig längd efter "${t[i]}".`);
-    const isRest = /^R$/i.test(t[i]);
-    const midi = isRest ? null : toMidi(t[i]);
-    if (!isRest && midi === null) throw new Error(`Takt ${bar}: ogiltig not "${t[i]}".`);
+  for (let i = 0; i < tok.length; i += 2) {
+    const dur = parseFloat(tok[i + 1]);
+    if (!(dur > 0)) throw new Error(t('errLenInvalid', bar, tok[i]));
+    const isRest = /^R$/i.test(tok[i]);
+    const midi = isRest ? null : toMidi(tok[i]);
+    if (!isRest && midi === null) throw new Error(t('errNote', bar, tok[i]));
     notes.push({ midi, dur });
     beats += dur;
   }
@@ -193,25 +262,25 @@ function parseBars(text) {
     const mel = parseVoice(melStr, num);
     const bas = basStr ? parseVoice(basStr, num) : { notes: [], beats: mel.beats };
     if (Math.abs(mel.beats - bas.beats) > 1e-6) {
-      throw new Error(`Takt ${num}: melodin har ${mel.beats} taktslag men basen ${bas.beats}.`);
+      throw new Error(t('errBeats', num, mel.beats, bas.beats));
     }
     bars.push({ num, chord, mel: mel.notes, bas: bas.notes, beats: mel.beats });
   }
-  if (bars.length === 0) throw new Error('Inga takter hittades.');
+  if (bars.length === 0) throw new Error(t('errNoBars'));
   return bars;
 }
 
 // Ett instrument: en ton. inst = nyckel i INST, vol = volymmultiplikator
-function voice(t, freq, dur, bellows, inst, isBass, vol) {
+function voice(t0, freq, dur, bellows, inst, isBass, vol) {
   const p = INST[inst];
-  const end = t + dur;
+  const end = t0 + dur;
   const peak = p.peak * vol * (isBass ? 0.85 : 1);
   const a = Math.min(p.attack, dur * 0.4);
 
   const out = ctx.createGain();
-  out.gain.setValueAtTime(0, t);
-  out.gain.linearRampToValueAtTime(peak, t + a);
-  out.gain.setValueAtTime(peak, Math.max(t + a + 0.01, end - p.release));
+  out.gain.setValueAtTime(0, t0);
+  out.gain.linearRampToValueAtTime(peak, t0 + a);
+  out.gain.setValueAtTime(peak, Math.max(t0 + a + 0.01, end - p.release));
   out.gain.linearRampToValueAtTime(0, end);
 
   // Balgtremolo, bara för dragspel
@@ -221,7 +290,7 @@ function voice(t, freq, dur, bellows, inst, isBass, vol) {
     const lfoGain = ctx.createGain();
     lfoGain.gain.value = bellows * (isBass ? 0.04 : 0.12);
     lfo.connect(lfoGain).connect(out.gain);
-    lfo.start(t);
+    lfo.start(t0);
     lfo.stop(end + 0.05);
   }
 
@@ -230,8 +299,8 @@ function voice(t, freq, dur, bellows, inst, isBass, vol) {
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
   lp.Q.value = 2;
-  lp.frequency.setValueAtTime(cutoff, t);
-  if (p.sweep) lp.frequency.linearRampToValueAtTime(cutoff + p.sweep, t + a * 3);
+  lp.frequency.setValueAtTime(cutoff, t0);
+  if (p.sweep) lp.frequency.linearRampToValueAtTime(cutoff + p.sweep, t0 + a * 3);
   out.connect(lp).connect(ctx.destination);
 
   // Vibrato (tonhöjdsmodulering i cent)
@@ -242,7 +311,7 @@ function voice(t, freq, dur, bellows, inst, isBass, vol) {
     vibGain = ctx.createGain();
     vibGain.gain.value = p.vibCents;
     vib.connect(vibGain);
-    vib.start(t);
+    vib.start(t0);
     vib.stop(end + 0.05);
   }
 
@@ -255,14 +324,14 @@ function voice(t, freq, dur, bellows, inst, isBass, vol) {
     const g = ctx.createGain();
     g.gain.value = r.gain;
     o.connect(g).connect(out);
-    o.start(t);
+    o.start(t0);
     o.stop(end + 0.05);
   }
 }
 
 // Spelar en stämma från starttiden t
-function playVoice(t, notes, beat, bellows, inst, isBass, vol) {
-  let cur = t;
+function playVoice(t0, notes, beat, bellows, inst, isBass, vol) {
+  let cur = t0;
   for (const n of notes) {
     const d = n.dur * beat;
     if (n.midi !== null) {
@@ -280,35 +349,35 @@ function makeNoise(c) {
   return buf;
 }
 
-function kick(t, v) {
+function kick(t0, v) {
   const o = ctx.createOscillator();
   o.type = 'sine';
-  o.frequency.setValueAtTime(150, t);
-  o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+  o.frequency.setValueAtTime(150, t0);
+  o.frequency.exponentialRampToValueAtTime(45, t0 + 0.12);
   const g = ctx.createGain();
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  g.gain.setValueAtTime(v, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.3);
   o.connect(g).connect(ctx.destination);
-  o.start(t);
-  o.stop(t + 0.35);
+  o.start(t0);
+  o.stop(t0 + 0.35);
 }
 
-function noiseHit(t, v, hpFreq, decay) {
+function noiseHit(t0, v, hpFreq, decay) {
   const n = ctx.createBufferSource();
   n.buffer = noiseBuf;
   const hp = ctx.createBiquadFilter();
   hp.type = 'highpass';
   hp.frequency.value = hpFreq;
   const g = ctx.createGain();
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  g.gain.setValueAtTime(v, t0);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + decay);
   n.connect(hp).connect(g).connect(ctx.destination);
-  n.start(t, Math.random() * 0.5);
-  n.stop(t + decay + 0.02);
+  n.start(t0, Math.random() * 0.5);
+  n.stop(t0 + decay + 0.02);
 }
 
-function snare(t, v) { noiseHit(t, v * 0.6, 1200, 0.18); }
-function hat(t, v)   { noiseHit(t, v * 0.2, 7000, 0.05); }
+function snare(t0, v) { noiseHit(t0, v * 0.6, 1200, 0.18); }
+function hat(t0, v)   { noiseHit(t0, v * 0.2, 7000, 0.05); }
 
 // Spelar ett trummönster för en takt
 function playDrums(t0, beats, style, beat, vol) {
@@ -316,10 +385,10 @@ function playDrums(t0, beats, style, beat, vol) {
   if (!pat) return;
   for (const [off, kind] of pat) {
     if (off >= beats) continue;
-    const t = t0 + off * beat;
-    if (kind === 'k') kick(t, vol);
-    else if (kind === 's') snare(t, vol);
-    else hat(t, vol);
+    const t1 = t0 + off * beat;
+    if (kind === 'k') kick(t1, vol);
+    else if (kind === 's') snare(t1, vol);
+    else hat(t1, vol);
   }
 }
 
@@ -349,15 +418,17 @@ function tick() {
   // Visa takten som hörs just nu
   while (state.events.length && state.events[0].time <= now) {
     const ev = state.events.shift();
-    const varv = state.maxPasses > 0 ? `Varv ${ev.pass} av ${state.maxPasses}` : `Varv ${ev.pass}`;
+    const varv = state.maxPasses > 0
+      ? t('passOf', ev.pass, state.maxPasses)
+      : t('pass', ev.pass);
     const ack = ev.chord ? ` · ${ev.chord}` : '';
-    document.getElementById('status').textContent = `${varv} · Takt ${ev.bar}${ack}`;
+    document.getElementById('status').textContent = `${varv} · ${t('bar', ev.bar)}${ack}`;
   }
 
   // Sista varvet är klart
   if (state.maxPasses > 0 && state.passesDone >= state.maxPasses && now > state.endTime) {
     stop();
-    document.getElementById('status').textContent = 'Klar';
+    document.getElementById('status').textContent = t('done');
   }
 }
 
@@ -408,6 +479,8 @@ document.getElementById('play').onclick = () => {
 };
 
 document.getElementById('stop').onclick = stop;
+
+applyLang();
 </script>
 </body>
 </html>
